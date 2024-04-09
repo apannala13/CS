@@ -55,7 +55,7 @@
 - Dynamo provides eventual consistency which allows for updates to be propagated to all replicas asynchronously.
     - Dynamo allows applications like shopping carts (adding items to cart and deleting are put requests) to function with eventual consistency by maintaining immutable versions of data, enabling both concurrent updates and reconciliation of divergent data versions to ensure no operation (add/remove) is lost despite failures or network issues.
     - Certain failure modes can result in system having several versions of the same data. Must design apps that acknowledge the possibility of multiple versions of the same data.
-    - Dynamo uses **vector clocks** to ****capture causality between different versions of the same object.
+    - Dynamo uses vector clocks to capture causality between different versions of the same object.
         - A vector clock is a list of (node, counter) pairs. One vector clock is associated with every version of every object. Can determine whether two versions of an object are on parallel branches or have casual ordering by observing vector clocks.
         - If counters on 1st obj’s clock ≤ all nodes of 2nd clock, then 1st is an ancestor of 2nd, and can't be forgotten. Otherwise, the two changes are a conflict and require reconciliation.
         -
