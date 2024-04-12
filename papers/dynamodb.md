@@ -55,7 +55,27 @@
 - Dynamo provides eventual consistency which allows for updates to be propagated to all replicas asynchronously.
     - Dynamo allows applications like shopping carts (adding items to cart and deleting are put requests) to function with eventual consistency by maintaining immutable versions of data, enabling both concurrent updates and reconciliation of divergent data versions to ensure no operation (add/remove) is lost despite failures or network issues.
     - Certain failure modes can result in system having several versions of the same data. Must design apps that acknowledge the possibility of multiple versions of the same data.
-    - Dynamo uses vector clocks to capture causality between different versions of the same object.
+    - Dynamo uses vector clocks ****to ****capture causality between different versions of the same object.
         - A vector clock is a list of (node, counter) pairs. One vector clock is associated with every version of every object. Can determine whether two versions of an object are on parallel branches or have casual ordering by observing vector clocks.
         - If counters on 1st obj’s clock ≤ all nodes of 2nd clock, then 1st is an ancestor of 2nd, and can't be forgotten. Otherwise, the two changes are a conflict and require reconciliation.
-        -
+    - A possible issue with vector clocks is that the size of vector clocks may grow if many servers coordinate the writes to an object.
+        - Not likely because writes are handled by one of the top N nodes in preference list.
+        - In case of network partitions or multiple server failures, write requests may be handled by nodes that are not in the top N nodes in preference list, causing size of vector clock to grow.
+            - Desirable to limit size of vector clock here.
+            - Truncation scheme:
+                - Along with each (node, counter) pair, store a timestamp that indicates the last time the node updated the data item. When the number of pairs in vector clock reaches threshold, oldest pair is removed from clock.
+                - can lead to inefficiencies in reconciliation.
+- Any storage in Dynamo can receive client get and put.
+    - Invoked using AWS’s request processing over HTTP. Two strategies a client can use to to select node:
+        - Route request through load balancer that will select node based on load info. Client does not have to link any code specific to Dynamo in app
+        - partition aware client that routes requests directly to appropriate coordinator nodes. Lower latency as we’re skipping forwarding step.
+    - Node handling read or write ops is coordinator.
+        - First among top N nodes in preference list
+        - If requests are received through load balancer, requests to access a key may be routed to any random node in ring.
+    - Read and write ours involve first N healthy nodes in preference list, skipping over those that are down or inaccessible. When all nodes are healthy, the top N nodes in a key’s preference list are accessed. During node failures or network partitions, nodes that are lower ranked in preference list are accessed.
+- To maintain consistency among replicas, Dynamo uses a quorum based consistency protocol.
+    - To key config Vals: R, W. R = min number of nodes that must participate in successful read operation. W =  min number of nodes that must participate in write operation.
+    - R + W > N yields quorum like system - latency of get or put operation is dictated by slowest of R or W replicas. Due to this, R and W are configured to be < N.
+    - Upon receiving put request for key, coordinator generates vector clock for new version and writes new version locally. coordinator then sends new version to N highest ranked reachable nodes. If at least W-1 nodes respond, write = successful.
+    - Similarly for get request, coordinator requests all existing versions of data for that key from N highest ranked reachable nodes in preference list for the key, and waits for R responses before returning result to client. If multiple versions of data gathered, all are returned.
+-
