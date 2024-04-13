@@ -78,4 +78,10 @@
     - R + W > N yields quorum like system - latency of get or put operation is dictated by slowest of R or W replicas. Due to this, R and W are configured to be < N.
     - Upon receiving put request for key, coordinator generates vector clock for new version and writes new version locally. coordinator then sends new version to N highest ranked reachable nodes. If at least W-1 nodes respond, write = successful.
     - Similarly for get request, coordinator requests all existing versions of data for that key from N highest ranked reachable nodes in preference list for the key, and waits for R responses before returning result to client. If multiple versions of data gathered, all are returned.
--
+- If Dynamo used a strict quorum membership scheme, it would be unavailable during server failures and network partitions.
+    - Dynamo utilizes a sloppy quorum protocol. All read and write operations are performed on the first N healthy nodes from the preference list, which may not always be the first N nodes encountered while walking the consistent hashing ring.
+    - Using hinted handoff, Dynamo ensures that the read and write operations are not failed due to temporary node or network failures.
+    -     Ex: If node A is temporarily down during a write operation, then a replica that would normally have lived on A will now be sent to node D. This replica (sent to D) will have a hint in its metadata that suggests which node was the intended recipient of the replica (A).
+    -     Once A is recovered, D may delete the object from its local store without decreasing the total number of replicas in the system.
+    - Hinted handoff allows Dynamo to hurdle past node/network failures.
+    - Applications that need the highest level of availability can set W to 1, which ensures that a write is accepted as long as a single node in the system has durably written the key it to its local store. Thus, the write request is only rejected if all nodes in the system are unavailable.
