@@ -81,7 +81,15 @@
 - If Dynamo used a strict quorum membership scheme, it would be unavailable during server failures and network partitions.
     - Dynamo utilizes a sloppy quorum protocol. All read and write operations are performed on the first N healthy nodes from the preference list, which may not always be the first N nodes encountered while walking the consistent hashing ring.
     - Using hinted handoff, Dynamo ensures that the read and write operations are not failed due to temporary node or network failures.
-    -     Ex: If node A is temporarily down during a write operation, then a replica that would normally have lived on A will now be sent to node D. This replica (sent to D) will have a hint in its metadata that suggests which node was the intended recipient of the replica (A).
-    -     Once A is recovered, D may delete the object from its local store without decreasing the total number of replicas in the system.
+    - Ex:
+        - If node A is temporarily down during a write operation, then a replica that would normally have lived on A will now be sent to node D. This replica (sent to D) will have a hint in its metadata that suggests which node was the intended recipient of the replica (A).
+        - Once A is recovered, D may delete the object from its local store without decreasing the total number of replicas in the system.
     - Hinted handoff allows Dynamo to hurdle past node/network failures.
     - Applications that need the highest level of availability can set W to 1, which ensures that a write is accepted as long as a single node in the system has durably written the key it to its local store. Thus, the write request is only rejected if all nodes in the system are unavailable.
+- Hinted handoff works best when system membership churn is low.  To detect inconsistencies between replicas and minimize the amt. of transferred data, Dynamo uses Merkle Trees.
+    - A Merkle tree is a hash tree where leaves are hashes of the values of individual keys. Parent nodes higher in the tree are hashes of their respective children.
+    - Advantage is that each branch of the tree can be checked independently without requiring nodes to download the entire tree of the entire dataset. Merkle trees help in reducing the amount of data that needs to be transferred while checking for inconsistencies among replicas.
+        - E.g  if the hash values of the root of two trees are equal, then the values of the leaf nodes in the tree are equal and the nodes require no synchronization.
+        - f not, it implies that the values of some replicas are different. In such cases, the nodes may exchange the hash values of children and the process continues until it reaches the leaves of the trees, at which point the hosts can identify the keys that are “out of sync”.
+        - Merkle trees minimize the amount of data that needs to be transferred for synchronization and reduce the number of disk reads performed during the anti-entropy process.
+    - In Dynamo, each node maintains a separate Merkle tree for each key range (the set of keys covered by a virtual node) it hosts. Allows nodes to compare whether the keys within a key range are up-to-date.
