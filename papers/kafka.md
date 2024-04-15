@@ -1,0 +1,23 @@
+# Kafka Notes:
+
+- Kafka is a distributed messaging system that was developed for collecting and delivering high volumes of log data with low latency.
+- There is a large amount of “log” data generated at any sizable internet company.
+    - user activity events corresponding to logins, pageviews, clicks, “likes”, sharing, comments, and search queries;
+    - operational metrics such as service call stack, call latency, errors, and system metrics such as CPU, memory, network, or disk utilization on each machine.
+    - Ex use cases for log data for site features: search relevance, item recommendations, ad targeting and reporting, security applications for spam/data scraping, and newsfeed features.
+- Many early systems for processing this kind of data relied on physically scraping log files off production servers for analysis
+- Kafka is a distributed, scalable and offers high throughput. Provides api to consume messages in real-time.
+- Many traditional messaging systems are not a good fit for log processing:
+    - they focus more on delivery guarantees, which are overkill for collecting log data.
+    - also do not focus as strongly on throughput.
+    - weak in distributed support.  no easy way to partition and store messages across machines.
+    - assume near immediate consumption of messages, so the queue of unconsumed messages is always fairly small. performance degrades significantly if messages are allowed to accumulate, e.g. data warehouses that consume large loads of data in batches.
+- Kafka uses a “pull” model - more suitable for applications since each consumer can retrieve the messages at the maximum rate it can sustain and avoid being flooded by messages pushed faster than it can handle.
+- Architecture:
+    - A stream of messages of a particular type is defined by a topic. A producer can publish messages to a topic, where they’re split into partitions.
+    - The topics are then stored at a set of servers called brokers.
+    - A consumer can subscribe to one or more topics from the brokers, and consume the subscribed messages by pulling data from the brokers.
+    - To subscribe to a topic, a consumer first creates one or more message streams for the topic. The messages published to that topic will be evenly distributed into these sub-streams.
+    - Each message stream provides an iterator interface over the continual stream of messages being produced. The consumer then iterates over every message in the stream and processes the payload of the message. Unlike traditional iterators, the message stream iterator never terminates.
+    - If there are currently no more messages to consume, the iterator blocks until new messages are published to the topic.
+    - Kafka supports both the point-to-point delivery model in which multiple consumers jointly consume a single copy of all messages in a topic, as well as the publish/subscribe model in which multiple consumers each retrieve its own copy of a topic.
