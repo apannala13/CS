@@ -1,8 +1,8 @@
 # Kafka Notes:
 
 - Kafka is a distributed messaging system that was developed for collecting and delivering high volumes of log data with low latency.
-- There is a large amount of “log” data generated at any sizable internet company.
-    - user activity events corresponding to logins, pageviews, clicks, “likes”, sharing, comments, and search queries;
+- There is a large amount of log data generated at any sizable internet company.
+    - user activity events corresponding to logins, pageviews, clicks, likes, sharing, comments, and search queries;
     - operational metrics such as service call stack, call latency, errors, and system metrics such as CPU, memory, network, or disk utilization on each machine.
     - Ex use cases for log data for site features: search relevance, item recommendations, ad targeting and reporting, security applications for spam/data scraping, and newsfeed features.
 - Many early systems for processing this kind of data relied on physically scraping log files off production servers for analysis
@@ -12,7 +12,7 @@
     - also do not focus as strongly on throughput.
     - weak in distributed support.  no easy way to partition and store messages across machines.
     - assume near immediate consumption of messages, so the queue of unconsumed messages is always fairly small. performance degrades significantly if messages are allowed to accumulate, e.g. data warehouses that consume large loads of data in batches.
-- Kafka uses a “pull” model - more suitable for applications since each consumer can retrieve the messages at the maximum rate it can sustain and avoid being flooded by messages pushed faster than it can handle.
+- Kafka uses a pull model - more suitable for applications since each consumer can retrieve the messages at the maximum rate it can sustain and avoid being flooded by messages pushed faster than it can handle.
 - Architecture:
     - A stream of messages of a particular type is defined by a topic. A producer can publish messages to a topic, where they’re split into partitions.
     - The topics are then stored at a set of servers called brokers.
@@ -21,3 +21,14 @@
     - Each message stream provides an iterator interface over the continual stream of messages being produced. The consumer then iterates over every message in the stream and processes the payload of the message. Unlike traditional iterators, the message stream iterator never terminates.
     - If there are currently no more messages to consume, the iterator blocks until new messages are published to the topic.
     - Kafka supports both the point-to-point delivery model in which multiple consumers jointly consume a single copy of all messages in a topic, as well as the publish/subscribe model in which multiple consumers each retrieve its own copy of a topic.
+- Since Kafka is distributed in nature, an Kafka cluster typically consists of multiple brokers. To balance load, a topic is divided into multiple partitions and each broker stores one or more of those partitions.
+    - Multiple producers and consumers can publish and retrieve messages at the same time.
+- Each partition of a topic corresponds to a logical log. Physically, a log is implemented as a set of segment files of approximately the same size (e.g., 1GB).
+    - Every time a producer publishes a message to a partition, the broker appends the message to the last segment file.
+    - Segment files are flushed to disk after a configurable number of messages have been published or a certain amount of time has elapsed. A message is exposed to consumer after it has been flushed.
+- Kafka messages dont have message ids. Instead, a message is addressed by its logical offset in the log.
+    - Avoids overhead of maintaining auxiliary, seek-intensive random-access index structures that map the message ids to the actual message locations.
+- A consumer always consumes messages from a particular partition sequentially.
+    - If the consumer acknowledges a particular message offset, it implies that the consumer has received all messages prior to that offset in the partition.
+    - Under the hood, the consumer issues asynchronous pull requests to the broker to have a buffer of data ready for the app to consume.
+    -
