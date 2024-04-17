@@ -59,4 +59,12 @@
 - The kafka broker is stateless. The information about how much each consumer has consumed is maintained by the consumer itself, not the broker.
     - However, this makes it tricky to delete a message, since a broker doesn’t know whether all subscribers have consumed the message.
     - Kafka uses a simple time-based SLA for this; A message is automatically deleted if it has been retained in the broker longer than a certain period, typically 7 days.
-    -
+    - A consumer can deliberately *rewind* back to an old offset and re-consume data. For example, when there is an error in application logic in the consumer, the application can re-play certain messages after the error is fixed. Easier to support in pull model > push.
+- Each producer can publish a message to either a randomly selected partition or a partition semantically determined by a partitioning key and a partitioning function.
+    - Consumer groups consists of one or more consumers that consume a set of subscribed topics, i.e., each message is delivered to only one of the consumers within the group.
+    - Different consumer groups each independently consume the full set of subscribed messages and no coordination is needed across consumer groups. It is best to evenly divide the messages in the brokers to the consumers without too much coordination overhead.
+    - A partition within a topic is the smallest unit of parallelism. A any given time, all messages from one partition are consumed only by a single consumer within each consumer group.
+        - processes only need coordinate when the consumers rebalance the load, an infrequent event.
+    - If  multiple consumers were to simultaneously consume a single partition, they would have to coordinate who consumes what messages, which necessitates locking and state maintenance overhead.
+- Kafka does not have a central master node, but rather the nodes coordinate amongst themselves in a decentralized fashion, using ZooKeeper.
+-
