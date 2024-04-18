@@ -66,5 +66,30 @@
     - A partition within a topic is the smallest unit of parallelism. A any given time, all messages from one partition are consumed only by a single consumer within each consumer group.
         - processes only need coordinate when the consumers rebalance the load, an infrequent event.
     - If  multiple consumers were to simultaneously consume a single partition, they would have to coordinate who consumes what messages, which necessitates locking and state maintenance overhead.
-- Kafka does not have a central master node, but rather the nodes coordinate amongst themselves in a decentralized fashion, using ZooKeeper.
--
+- Kafka does not have a central master node, but rather the nodes coordinate amongst themselves in a decentralized fashion, using ZooKeeper, which has a simple API:
+    - One can create a path, set the value of a path, read the value of a path, delete a path, and list the children of a path.
+    - one can register a watcher on a path and get notified when the children
+    of a path or the value of a path has changed;
+    - a path can be created as ephemeral (as oppose to persistent), which means that
+    if the creating client is gone, the path is automatically removed by
+    the Zookeeper server;
+    - zookeeper replicates its data to multiple servers, emphasizing reliability & availability
+- Kafka uses ZooKeeper for multiple tasks:
+    - detecting the addition and the removal of brokers and consumers
+    - triggering a rebalance process in each consumer when the above events
+    happen
+    - maintaining the consumption relationship and keeping track of the consumed offset of each partition
+- When each broker or consumer starts up, it stores its information in a broker or consumer registry in ZooKeeper.
+    - The broker registry contains the brokers host and port name and set of topics and partitions stored on it
+    - The consumer registry includes the consumer group to which a consumer belongs and the
+    set of topics that it subscribes to.
+    - Each consumer group is associated with an ownership registry and offset registry in zookeeper. The ownership registry has one path for every subscribed partition and the path value is the id of the consumer currently consuming from this partition.
+    - The paths created in Zookeeper are ephemeral for the broker registry, the consumer registry and the ownership registry, and persistent for the offset registry. If a broker fails, all partitions on it are automatically removed from the broker registry.
+    - The failure of a consumer causes it to lose its entry in the consumer registry and all partitions that it owns in the ownership registry. Each consumer registers a Zookeeper watcher on both the broker registry and the consumer registry, and will be notified whenever a change in the broker set or the consumer group occurs.
+    - During the initial startup of a consumer or when the consumer is notified about a broker/consumer change through the watcher, the consumer initiates a rebalance process to determine the new subset of partitions that it should consume from.
+    - When there are multiple consumers within a group, each of them will be notified of a broker or a consumer change.
+        - However, the notification may come at slightly different times at the consumers.
+        - it is possible that one consumer tries to take ownership of a partition still owned by another consumer.
+        - When this happens, the first consumer simply releases all the partitions that it currently owns, waits a bit and retries the rebalance process. Stabilizes after a few retries.
+    - When a new consumer group is created, no offsets are available in the offset registry. In this case, the consumers will begin with either the smallest or the largest offset (depending on a configuration) available on each subscribed partition, using an API on the brokers.
+- Kafka only guarantees at-least-once delivery.
