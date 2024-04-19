@@ -93,3 +93,8 @@
         - When this happens, the first consumer simply releases all the partitions that it currently owns, waits a bit and retries the rebalance process. Stabilizes after a few retries.
     - When a new consumer group is created, no offsets are available in the offset registry. In this case, the consumers will begin with either the smallest or the largest offset (depending on a configuration) available on each subscribed partition, using an API on the brokers.
 - Kafka only guarantees at-least-once delivery.
+- Most of the time, a message is delivered exactly once to each consumer group.
+    - However, in the case when a consumer process crashes without a clean shutdown, the consumer process that takes over those partitions owned by the failed consumer may get some duplicate messages that are after the last offset successfully committed to zookeeper.
+- Kafka guarantees that messages from a single partition are delivered to a consumer in order. However, there is no guarantee on the ordering of messages coming from different partitions.
+- To avoid log corruption, Kafka stores a CRC for each message in the log. If there is any I/O error on the broker, Kafka runs a recovery process to remove those messages with inconsistent CRCs.
+- If a broker goes down, any message stored on it not yet consumed becomes unavailable. If the storage system on a broker is permanently damaged, any unconsumed message is lost forever. Replication should be added here.
