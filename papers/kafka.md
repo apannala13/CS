@@ -98,3 +98,43 @@
 - Kafka guarantees that messages from a single partition are delivered to a consumer in order. However, there is no guarantee on the ordering of messages coming from different partitions.
 - To avoid log corruption, Kafka stores a CRC for each message in the log. If there is any I/O error on the broker, Kafka runs a recovery process to remove those messages with inconsistent CRCs.
 - If a broker goes down, any message stored on it not yet consumed becomes unavailable. If the storage system on a broker is permanently damaged, any unconsumed message is lost forever. Replication should be added here.
+- Kafka at Linkedin:
+    - one Kafka cluster co-located with each datacenter where user- facing services run
+    - frontend services generate various kinds of log data and publish it to the local Kafka brokers in batches.
+    - rely on a hardware load-balancer to distribute the publish requests to the set of Kafka brokers evenly
+    - also deploy a cluster of Kafka in a separate datacenter for offline analysis, located geographically close to  Hadoop cluster and other data warehouse infrastructure.
+    - tracking also includes an auditing system to verify that there is no data loss along the whole pipeline.
+    - To facilitate this, each message carries the timestamp and the server name when they are generated.
+        - instrument each producer such that it periodically generates a monitoring event, which records the number of messages published by that producer for each topic within a fixed time window.
+        - The producer publishes the monitoring events to Kafka in a separate topic. The consumers can then count the number of messages that they have received from a given topic and validate those counts with the monitoring events to validate the correctness of data.
+    - Loading into the Hadoop cluster is accomplished by implementing a special Kafka input format that allows MapReduce jobs to directly read data from Kafka.
+    - use Avro as  serialization protocol since it is efficient and supports schema evolution.
+        - schema allows  to enforce a contract to ensure compatibility between data producers and consumers. Use a lightweight schema registry service to map the schema id to the actual schema.
+        - When a consumer gets a message, it looks up in the schema registry to retrieve the schema, which is used to decode the bytes into an object (this lookup need only be done once per schema, since the values are immutable).
+- Kafka compared to other streaming services:
+    - Comparison of Kafka, Apache ActiveMQ v5.4, and RabbitMQ v2.4 on performance.Tests conducted on two Linux machines, each equipped with 8 2GHz cores, 16GB of RAM, and 6 disks in RAID 10 configuration, connected by a 1Gb network link.
+    - Setup and Methodology:
+        - Used ActiveMQ’s default message store, KahaDB, and a similar alternative store with comparable performance.
+        - Systems configured with comparable settings where possible.
+        - Broker system ran asynchronously to flush messages to the persistence store.
+    - Producer Test Results:
+        - Single producer published 10 million messages, each 200 bytes.
+        - Kafka configured with batch sizes of 1 and 50, significantly outperformed ActiveMQ and RabbitMQ.
+        - Kafka achieved 50,000 messages per second with batch size 1 and 400,000 with batch size 50.
+        - Kafka's non-acknowledgment of messages increased throughput but risked message loss, deemed acceptable for log data.
+    - Efficiency Insights:
+        - Kafka had lower overhead per message (9 bytes) compared to ActiveMQ (144 bytes).
+        - Kafka's storage format and batching mechanism substantially increased efficiency and throughput.
+        - ActiveMQ’s overhead came from heavy message headers and maintenance of indexing structures like B-Trees.
+    - Consumer Test Results:
+        - Single consumer retrieved 10 million messages from each system.
+        - Kafka’s consumer outperformed, processing 22,000 messages per second, more than 4 times that of ActiveMQ and RabbitMQ.
+        - Efficient storage and reduced transmission overhead in Kafka contributed to its superior performance.
+    - Conclusion:
+        - The experiment highlights potential performance gains with specialized systems like Kafka, though it acknowledges that ActiveMQ and RabbitMQ offer more features.
+- Future plans:
+    - plan to add built-in replication of messages across multiple brokers to allow durability and data availability guarantees even in the case of unrecoverable machine failures.
+    - support both asynchronous and synchronous replication models to allow some tradeoff between producer latency and the strength of the guarantees provided.
+    - add some stream processing capability in Kafka. After retrieving messages from Kafka, real time applications often perform similar operations such as window-based counting and joining each message with records in a secondary store or with messages in another stream.
+        - At the lowest level this is supported by semantically partitioning messages on the join key during publishing so that all messages sent with a particular key go to the same partition and hence arrive at a single consumer process.
+        - This provides the foundation for processing distributed streams across a cluster of consumer machines.
