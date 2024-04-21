@@ -97,3 +97,15 @@
     - Dynamo's architecture includes an explicit mechanism for node management, where administrators can add or remove nodes using a command line tool or a browser interface, initiating these changes directly on a Dynamo node.
     - Membership changes in the Dynamo system are recorded persistently and propagate through a gossip-based protocol, ensuring all nodes maintain an eventually consistent view of the network's composition.
     - Upon initialization, each Dynamo node selects its virtual nodes (tokens) within the consistent hash space, and these mappings are stored and regularly reconciled across nodes through the same gossip-based communications that manage membership changes. This mechanism ensures that each node knows which peers to contact for specific key operations.
+    - This could result in a logically partitioned Dynamo ring, e.g. admin could contact node A to join A to the the ring, the contact node B to join B to the ring. A and B would each consider itself a member of the ring, yet neither would be aware of the other.
+        - to prevent this, dynamo nodes play the role of seeds:
+            - seeds are nodes that are discovered via an external mechanism and are known to all nodes. Because all nodes eventually reconcile their membership with a seed, logical partitions are highly unlikely.
+- Failure detection in Dynamo is used to avoid attempts to communicate with unreachable peers during get() and put() operations, and when transferring partitions and hinted replicas.
+    - For avoiding failed attempts at communication, a local notion of failure detection is sufficient: node A may consider node B failed if node B does not respond to node A’s messages (even if B is responsive to node C’s messages).
+    - Node A then uses alternate nodes to service requests that map to B’s partitions. A periodically retries B to check for recovery.
+    - In the absence of client requests to drive traffic between two nodes, neither node really needs to know whether the other is reachable and responsive.
+    - Decentralized failure detection protocols use a simple gossip-style protocol that enable each node in the system to learn about the arrival (or departure) of other nodes.
+- When a new node is added into the system, it gets assigned a number of tokens that are randomly scattered on the ring.
+    - For every key range that is assigned to node X, there may be a number of nodes (less than or equal to N) that are currently in charge of handling keys that fall within its token range.
+    - Due to the allocation of key ranges to X, some existing nodes no longer have to some of their keys and these nodes transfer those keys to X.
+    -
