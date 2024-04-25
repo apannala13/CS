@@ -1,5 +1,4 @@
 # Dynamo DB Notes:
-
 - Sacrificing consistency for availability - eventual consistency
 - Highly reliable/scalable KV store. ACID data stores have poor availability, and traditional replicated RDBMS systems focus on guaranteeing strong consistency to replicated data. Hence, they are limited in scalability and reliability.
 - Decentralized, loosely coupled, hundreds of services.
@@ -108,4 +107,4 @@
 - When a new node is added into the system, it gets assigned a number of tokens that are randomly scattered on the ring.
     - For every key range that is assigned to node X, there may be a number of nodes (less than or equal to N) that are currently in charge of handling keys that fall within its token range.
     - Due to the allocation of key ranges to X, some existing nodes no longer have to some of their keys and these nodes transfer those keys to X.
-    -
+- In Dynamo, each storage node has three main software components: request coordination, membership and failure detection, and a local persistence engine.
