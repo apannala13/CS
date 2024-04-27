@@ -36,7 +36,8 @@ Nonfunctional requirements:
 
 High Level Architecture:
 
-![Untitled](distributed%20message%20queue%20ca75678f1c7f48a68c9a6ada824ea815/Untitled.png)
+[![Untitled](distributed%20message%20queue%20ca75678f1c7f48a68c9a6ada824ea815/Untitled.png)
+](https://github.com/apannala13/images/blob/main/architecture.jpg)
 
 - A l**oad balancer** is a reverse proxy. It presents a **virtual IP address** (VIP) representing the application to the client. The client connects to the VIP and the load balancer makes a determination through its algorithms to send the connection to a specific application instance on a server. Load balancers help achieve high throughput and availability:
 - When domain name is hit, the request is transferred to one of the VIPs registered in the domain name system (DNS) for our domain name.
