@@ -82,4 +82,34 @@ Front End:
     - Usage data collection:
         - Gather real time information that can be used for audit and billing (invoices).
 
-Metdata Service:
+Metadata Service:
+
+- The metadata service acts a caching layer between the front end and a persistent storage
+- Many reads, little writes
+- Strong consistency storage is preferred but not required
+- Options for organizing cache clusters:
+    1. Cache is relatively  small and we can store the whole dataset on every cluster node. 
+        1. Front end host randomly calls a chosen metadata service host, because all the cache clusters contain the same data.
+        2. Can introduce a load balancer between front end and metadata service, as all metadata service hosts are equal.
+    2. Partition data into small chunks (shards). 
+        1. Dataset is too big and cannot be placed in memory of a single host. Store each chunk of data on a separate node in a cluster. Front end knows which shard stores the data and calls the shard directly.
+        2. Consistent hashing 
+    3. Partition data into shards, but front end doesn't know on what shard data is stored. 
+        1. Front end calls a random metadata service host, and host itself knows where to forward the request to.
+        2. Consistent hashing
+
+Back End:
+
+- Example questions:
+    - where and how do we store messages?
+        - database is an option but since we are building a message queue with high throughput, all the throughput will be offloaded to the database. Could use a highly available and scalable db. Not recommended.
+        - Answer: RAM and local disk of a backend host.
+    - How do we replicate data?
+        - Send copies of messages to other hosts
+    - How does front end select a backend host to send data to? To retrieve data from?
+        - Leverage metadata service
+- Summary:
+    - Message comes to front end
+    - front end consults metadata service to find what backend host to send data to
+    - message is sent to a selected backend host and data is replicated
+    - when Get message call comes, front end talks to metadata service to identify a backend host that stores the data.
