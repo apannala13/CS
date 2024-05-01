@@ -113,3 +113,66 @@ Back End:
     - front end consults metadata service to find what backend host to send data to
     - message is sent to a selected backend host and data is replicated
     - when Get message call comes, front end talks to metadata service to identify a backend host that stores the data.
+ 
+- Backend Hosts Options:
+    - Option A: Leader Follower:
+        - All requests for a queue go to a leader instance. Ex:
+            - Send message request comes to front end instance
+            - Message comes to queue with ID of Q1
+            - Front end service calls metadata service to identify leader backend instance for this queue
+            - Let's assume backend instance B is a leader for Q1. the message is sent to the leader, and the leader is fully responsible for data replication.
+            - When a receive message comes to the front end instance, it also makes a request to meta data service to identify the leader for the queue.
+            - The message is then retrieved from the leader instance and leader is responsible for cleaning up the original message and the replicas.
+            - We can use an in cluster manager like Zookeeper for leader election and management. It is responsible for maintaining the mapping between queues, leaders and followers.  It has to be reliable, scalable and performant.
+    - Option B: Small cluster of independent hosts
+        - Small set of clusters, each cluster consisting of 3-4 machines distributed across several data centers:
+            - When send message request comes in, call metadata service to identify which cluster is responsible for storing messages for the Q1 queue.
+            - make a call to a randomly selected instance in the cluster, and the instance is responsible for data replication across all nodes in the cluster.
+            - When receive message request comes in and we identified which cluster stores messages for the Q1 queue, we once again call a randomly selected host and retrieve the message.
+            - The host is responsible for message cleanup.
+            - We no longer need a component for leader election, but still need something to help manage queue to cluster assignments. We can call this out cluster manager. This component will be response for maintaining mapping between queues and clusters.
+    - In cluster manager:
+        - Manages queue assignments within the cluster.
+        - Maintains a list of hosts in the cluster
+        - Monitors heartbeats from hosts.
+        - Deals with leader and follower failures.
+        - Splits queue into partitions, each partition gets leader server
+    - Out cluster manager:
+        - Manages queue assignment among clusters
+        - Maintains a list of clusters
+        - Monitors each cluster health
+        - Deals with overheated clusters
+        - Splits queue across several clusters, so messages are equally distributed across clusters.
+- What else?
+    - Queue creation and deletion:
+        - Queue can be auto created, for ex. when first message for queue hits front end service.
+        - Can define an API for queue creation, allows more control over queue config params.
+        - Deletion is more sensitive; cannot expose deleteQueue API via public REST endpoint. Rather, should be exposed thru CLI utility for experienced admins.
+    - Message Deletion:
+        - One option is not to delete a message right after it was consumed. In this case, consumers have to be responsible for what they already consumed. Need to maintain order for messages in the queue and keep track of offset, which is the position of a message within the queue. Messages can then be deleted several days later by a job. Used by Apache Kafka.
+        - Second option is to do something similar to Amazon SQS. Messages are not deleted immediately, but marked as invisible so that other consumers may not get already retrieved messages. Consumer that retrieves the messages calls a deleteMessage API to delete message from Backend host. Otherwise, message becomes visible and may be delivered and processed twice.
+    - Message Replication:
+        - Can be replicated synchronously or asynchonoursly.
+            - Synchronously means that when the backend host receives new message, it waits until data is replicated to other hosts. Only if replication is fully completed, successful message is returned to producer.
+                - Higher durability, higher latency for send message operation.
+            - Conversely, asynchronous replication means that response is returned back to a producer as soon as message is stored on a single backend host. Message is later replicated to other hosts.
+                - More performant, but doesn't guarantee that message will survive backend host failure.
+    - Message Delivery Guarantees:
+        - At most once when messages may be lost but are never redelivered.
+        - At least once when messages are never lost but may be redelivered.
+        - Exactly once, where each message is delivered once and only once.
+            - Hard to achieve, as there are many points of failure in distributed message queues. E.g. producer may fail to deliver multiple times, data replication may fail, consumers may fail to retrieve or process the message. Most distributed message queues today support at least once delivery due to this, as it provides a good balance between durability, availability and performance.
+    - Push vs Pull:
+        - With pull model, consumer constantly sends retrieve message requests and when new message is available in the queue, It is sent back to the consumer.
+            - Used by Kafka. Easier to
+        - With push, consumer is constantly not bombarding front end service with receive calls.
+            - Instead, consumer is notified when new message arrives to the queue.
+        - From a distributed message queue perspective, pull is easier to implement. From a consumer perspective, we need to do more work if we pull.
+    - FIFO:
+        - Oldest message in a queue is always processed first. Hard to maintain strict order in distributed systems. Many distributed solutions do not guarantee a strict order or have limitations around throughput, as queue cannot be fast while doing additional validations and coordination to guarantee a struct order.
+    - Security:
+        - Messages are securely transferred to and from a queue. Encryption using SSL and HTTPS helps to protect messages in transit. Also encrypt messages while storing them on backend hosts.
+    - Monitoring:
+        - Monitor components or micro services that we build: front end, metadata and backend service, as well as provide visibility into customer’s experiences.
+        - In other words, we need to monitor health of our distributed queue system and give customers ability to track state of their queues. Each service we build has to emit metrics and write log data. As operators of these services, we need to create dashboards for each microservice and setup alerts. Customers of queue have to be able to setup dashboards and set up alerts as well.
+        - Integration with monitoring system is required.
