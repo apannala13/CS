@@ -1,0 +1,89 @@
+# Hands on ML notes
+
+Chapter 1: the ML landscape
+
+- features are **measurable properties of data samples that are used as input for models**. They are also known as variables or attributes.
+- Machine Learning systems can be classified according to the amount and type of supervision they get during training.  There are four major categories: supervised learning, unsupervised learning, semisupervised learning, and Reinforcement Learning.
+- In *supervised learning*, the training data you feed to the algorithm includes the desired solutions, called *labels*
+    - A typical supervised learning task is *classification*. E.g. classifying emails as spam or not.
+    - Another typical task is to predict a target numeric value, such as the price of a car, given a set of features (mileage, age, brand, etc.) called predictors. This sort of task is called regression. To train the system, you need to give it many examples of cars, including both their predictors and their labels (i.e., their prices).
+    - In Machine Learning an *attribute* is a data type (e.g., “Mileage”), while a *feature* has several meanings depending on the context, but generally means an attribute plus its value (e.g., “Mileage = 15,000”)
+    - Some regression algorithms can be used for classification as well. *Logistic Regression* is commonly used for classification, as it can output a value that corresponds to the probability of belonging to a given class (e.g., 20% chance of being spam)
+    - Most important supervised learning algorithms include:
+        - k-Nearest Neighbors
+        - Linear Regression
+        - Logistic Regression
+        - Support Vector Machines (SVMs)
+        - Decision Trees and Random Forests
+        - Neural networks
+- In unsupervised learning, the training data is unlabeled, meaning the system tries to learn without a teacher.
+    - Here are some of the most important unsupervised learning algorithms:
+        - Clustering
+            - K-Means
+            - DBSCAN
+            - Hierarchical Cluster Analysis (HCA)
+        - Anomaly detection and novelty detection
+            - One-class SVM
+            - Isolation Forest
+    - For example, if you have a lot of data say about your blog’s visitors, you may want to run a clustering algorithm to try to detect groups of similar visitors. At no point do you tell the algorithm which group a visitor belongs to: it finds those connections without your help. A hierarchical clustering algorithm may divide each group into smaller groups.
+- Visualization algorithms are good examples of unsupervised learning algorithms; you feed them complex unlabeled data and they output a 2D or 3D representation of your data. They try to preserve as much structure as they can to help you identify patterns.
+- dimensionality reduction is the goal of simplifying the data without losing too much info.
+    - One way to do this is to merge several correlated features into one.  For example, a car’s mileage may be strongly correlated with its age, so the dimensionality reduction
+    algorithm will merge them into one feature that represents the car’s wear
+    and tear. This is called feature extraction.
+- Another unsupervised task is anomaly detection. For example, detecting unusual credit card transactions to prevent fraud, catching manufacturing defects, or automatically removing outliers from a dataset before feeding it to another learning algorithm.  another common unsupervised task is association rule learning in which the goal is to dig into large amounts of data and discover interesting
+relations between attributes.
+- Semisupervised Learning:
+    - Since labeling data is usually time-consuming and costly, you will often
+    have plenty of unlabeled instances, and few labeled instances. Some
+    algorithms can deal with data that’s partially labeled. This is called
+    semisupervised learning
+- Reinforcement Learning:
+    - The learning system, called an agent in this context, can observe the environment, select and
+    perform actions, and get rewards in return (or penalties in the form of
+    negative rewards.  It must then learn by itself what is the best strategy, called a policy, to get the most reward over time. A policy defines what action the agent should choose when it is in a given situation
+- Batch and Online Learning
+    - In batch learning, the system is incapable of learning incrementally: it must
+    be trained using all the available data. This will generally take a lot of time
+    and computing resources, so it is typically done offline. First the system is
+    trained, and then it is launched into production and runs without learning
+    anymore; it just applies what it has learned. This is called offline learning.
+        - Also, training on the full set of data requires a lot of computing resources
+        (CPU, memory space, disk space, disk I/O, network I/O, etc.)
+    - In online learning, you train the system incrementally by feeding it data
+    instances sequentially, either individually or in small groups called minibatches.  Each learning step is fast and cheap, so the system can learn about
+    new data on the fly, as it arrives.
+        - Online learning is great for systems that receive data as a continuous flow
+        (e.g., stock prices) and need to adapt to change rapidly or autonomously. It
+        is also a good option if you have limited computing resources: once an
+        online learning system has learned about new data instances, it does not
+        need them anymore, so you can discard them. Can also be used to train systems on huge datasets that cannot fit in one machine’s main memory.
+        - One important parameter is how fast they should adapt to changing data; called the learning rate.
+        - A big challenge with online learning is that if bad data is fed to the system,
+        the system’s performance will gradually decline. If it’s a live system, your
+        clients will notice
+- There are two main approaches to generalization: instance-based learning
+and model-based learning.
+    - Instance-based learning
+        - For example, when creating a spam filter, flagging all emails that are identical to emails that have already been flagged by users.
+        - Another way is to program the spam filter to flag emails that are similar to known spam emails. Requires a measure of similarity between two emails (e.g. number of words in common).The system would flag an email as spam if it has many words in common with a known spam email.
+        - This is called instance-based learning: the system learns the examples by
+        heart, then generalizes to new cases by using a similarity measure to
+        compare them to the learned examples
+    - Model-based learning
+        - Another way to generalize from a set of examples is to build a model of
+        these examples and then use that model to make predictions.
+        - For example to predict whether money makes people happy, and using a GDP [per capita dataset, which has a linear trend of life satisfaction compared to the country’s GDP per capita.  So you decide to model life satisfaction as a linear function of GDP per capita. This step is called model selection: you selected a linear model of life satisfaction with just one attribute, GDP per capita
+            - life_satisfaction = 0^0 + θ^1 × GDP_per_capita
+            - This model has two parameters: 0^0 and 0^1. By tweaking these parameters, we can make the model represent any linear function.
+        - How can you know which values will make your model perform
+        best? To answer this question, you need to specify a performance measure.
+        You can either define a utility function (or fitness function) that measures
+        how good your model is, or you can define a cost function that measures
+        how bad it is. For Linear Regression problems, people typically use a cost
+        function that measures the distance between the linear model’s predictions
+        and the training examples; the objective is to minimize this distance.
+        - This is where the Linear Regression algorithm comes in: you feed it your
+        training examples, and it finds the parameters that make the linear model fit
+        best to your data. This is called training the model.
+        -
